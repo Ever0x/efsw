@@ -117,18 +117,19 @@ function conf_excludes()
 	end
 end
 
-workspace "efsw"
-	location("./make/" .. os.target() .. "/")
-	targetdir("./bin")
-	configurations { "debug", "release", "relwithdbginfo" }
-	platforms { "x86_64", "x86" }
-
+project "efsw"
+	kind "StaticLib"
+	language "C++"
+	cppdialect "C++20"
+		
+	targetdir ("%{wks.location}/bin/" .. outputdir .. "/%{prj.name}")
+	objdir ("%{wks.location}/bin-int/" .. outputdir .. "/%{prj.name}")
+	
 	if os.istarget("windows") then
-		osfiles = "src/efsw/platform/win/*.cpp"
+	osfiles = "src/efsw/platform/win/*.cpp"
 	else
 		osfiles = "src/efsw/platform/posix/*.cpp"
 	end
-
 	-- Activates verbose mode
 	if _OPTIONS["verbose"] then
 		defines { "EFSW_VERBOSE" }
@@ -139,98 +140,17 @@ workspace "efsw"
 		defines { "EFSW_USE_CXX11" }
 	end
 
-	objdir("obj/" .. os.target() .. "/")
+	includedirs { "include", "src" }
+	files { "src/efsw/*.cpp", osfiles }
+	conf_excludes()
 
-	filter "platforms:x86"
-		architecture "x86"
-
-	filter "platforms:x86_64"
-		architecture "x86_64"
-
-	project "efsw-static-lib"
-		kind "StaticLib"
-		language "C++"
-		targetdir("./lib")
-		includedirs { "include", "src" }
-		files { "src/efsw/*.cpp", osfiles }
-		conf_excludes()
-
-		filter "configurations:debug"
-			defines { "DEBUG" }
-			symbols "On"
-			targetname "efsw-static-debug"
-			conf_warnings()
-
-		filter "configurations:release"
-			defines { "NDEBUG" }
-			optimize "On"
-			targetname "efsw-static-release"
-			conf_warnings()
-
-		filter "configurations:relwithdbginfo"
-			defines { "NDEBUG" }
-			symbols "On"
-			optimize "On"
-			targetname "efsw-static-reldbginfo"
-			conf_warnings()
-
-	project "efsw-test"
-		kind "ConsoleApp"
-		language "C++"
-		links { "efsw-static-lib" }
-		files { "src/test/*.cpp" }
-		includedirs { "include", "src" }
-		conf_links()
-
-		filter "configurations:debug"
-			defines { "DEBUG" }
-			symbols "On"
-			targetname "efsw-test-debug"
-			conf_warnings()
-
-		filter "configurations:release"
-			defines { "NDEBUG" }
-			optimize "On"
-			targetname "efsw-test-release"
-			conf_warnings()
-
-		filter "configurations:relwithdbginfo"
-			defines { "NDEBUG" }
-			symbols "On"
-			optimize "On"
-			targetname "efsw-test-reldbginfo"
-			conf_warnings()
-
-	project "efsw-shared-lib"
-		kind "SharedLib"
-		language "C++"
-		targetdir("./lib")
-		includedirs { "include", "src" }
-		files { "src/efsw/*.cpp", osfiles }
-		defines { "EFSW_DYNAMIC", "EFSW_EXPORTS" }
-		conf_excludes()
-		conf_links()
-
-		filter "configurations:debug"
-			defines { "DEBUG" }
-			symbols "On"
-			targetname "efsw-debug"
-			conf_warnings()
-
-		filter "configurations:release"
-			defines { "NDEBUG" }
-			optimize "On"
-			targetname "efsw"
-			conf_warnings()
-
-		filter "configurations:relwithdbginfo"
-			defines { "NDEBUG" }
-			symbols "On"
-			optimize "On"
-			targetname "efsw"
-			conf_warnings()
-
-			if os.istarget("linux") or os.istarget("bsd") or os.istarget("haiku") then
-				targetextension ( ".so." .. efsw_version )
-				postbuildcommands { "sh ../../project/build.reldbginfo.sh " .. efsw_major_version .. " " .. efsw_minor_version .. " " .. efsw_patch_version .. " " .. iif( _OPTIONS["strip-symbols"], "strip-symbols", "" ) }
-			end
+	filter "configurations:Debug"
+		defines { "DEBUG" }
+		symbols "On"
+		targetname "efsw-static-debug"
+		conf_warnings()
+	filter "configurations:Release"
+		defines { "NDEBUG" }
+		optimize "On"
+		targetname "efsw-static-release"
+		conf_warnings()
